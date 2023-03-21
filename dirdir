@@ -71,12 +71,9 @@ sub main () {
     opendir my $dh , '.' or do { open_dir_error_message ( abs_path "." ) ; return () } ; 
     my @dirs0 = sort grep { ! /\A\.{1,2}\Z/ && -d $_ } readdir $dh ;  # <-- - sort は -g が無いときは不要である
     for ( @dirs0 ) { #reverse 0 .. $#dirs ) {
-      if ( -l $_ ) { 
-        say join "\t" , $o{g} =~ m/d/ ? () : "link", head_trim (getcwd).$I.$_ if exists $o{g} && $o{g} =~ m/l/;
-        ++ $Sq [ $dep + 1 ] ;         #splice @dirs , $_ , 1 ; 
-        next ;
-      } 
-      push @dirs , $_ ;
+      do { push @dirs , $_ ; next } if ! -l $_  ;
+      say join "\t" , $o{g} =~ m/d/ ? () : "link", head_trim (getcwd).$I.$_ if ($o{g}//'') =~ m/l/;#exists $o{g} && $o{g} =~ m/l/;
+      ++ $Sq [ $dep + 1 ] ;         #splice @dirs , $_ , 1 ; 
     }
     @dirs = grep { ! /\A\./ } @dirs if 0 eq ($o{'.'}//'') ; # 隠しファイルに関する処理
     for ( @dirs ) { 
