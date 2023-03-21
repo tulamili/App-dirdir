@@ -1,6 +1,6 @@
 package App::dirdir ;  
-our $VERSION = '0.010' ; 
-our $DATE = '2023-03-21T16:24+09:00' ; 
+our $VERSION = '0.020' ; 
+our $DATE = '2023-03-21T23:19+09:00' ; 
 
 =encoding utf8
 
