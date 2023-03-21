@@ -29,6 +29,13 @@ exit 0 ;
 
 END{ print RESET "" } ;
 
+END{
+  my $s = tv_interval $time_start , [ gettimeofday ] ; 
+  say STDERR BOLD FAINT " --  " , "Process time: " , 
+    sprintf( "%.6f", $s ) , " second" . ($s>1 ? 's' : '' ) . ". ($0)"  ; 
+}
+
+
 sub open_dir_error_message ( $ ) { 
   say STDERR FAINT BOLD YELLOW "Cannot open the directory `$_[0]' so skipped." ;
 }
@@ -59,50 +66,36 @@ sub main () {
     # 第１引数は、元の指定ディレクトリからの深さであり、
     # 返り値は、そこで経験した最大の深さである。
     my $dep = $_[0] ; # 深さ
-    my $mdep = $dep ; # 最大深さの記録用。
+    my $depM = $dep ; # 最大深さの記録用。
     my @dirs ; # = get_dirs () ;
     opendir my $dh , '.' or do { open_dir_error_message ( abs_path "." ) ; return () } ; 
-    #@dirs = sort grep { ! /\A\.{1,2}\Z/ && -d $_ && ! -l $_ } readdir $dh ;  # <-- - sort は -g が無いときは不要である
     my @dirs0 = sort grep { ! /\A\.{1,2}\Z/ && -d $_ } readdir $dh ;  # <-- - sort は -g が無いときは不要である
     for ( @dirs0 ) { #reverse 0 .. $#dirs ) {
-      if ( -l $_ )
-      { 
+      if ( -l $_ ) { 
         say join "\t" , $o{g} =~ m/d/ ? () : "link", head_trim (getcwd).$I.$_ if exists $o{g} && $o{g} =~ m/l/;
-        #splice @dirs , $_ , 1 ; 
-        ++ $Sq [ $dep + 1 ] ;
+        ++ $Sq [ $dep + 1 ] ;         #splice @dirs , $_ , 1 ; 
         next ;
       } 
       push @dirs , $_ ;
     }
-    #@dirs = grep { ! ( -l $_ && ++ $Sq[$dep+1]  ) } @dirs ; 
-    #@dirs = grep { ! ( -l $_ ) } @dirs ; 
-    @dirs = grep { ! /\A\./ } @dirs if exists $o{'.'} && $o{'.'} eq "0" ; # 隠しファイルに関する処理
-    #closedir $dh ;
-
+    @dirs = grep { ! /\A\./ } @dirs if 0 eq ($o{'.'}//'') ; # 隠しファイルに関する処理
     for ( @dirs ) { 
-      #chdir $dh ;
       next unless chdir $_ ; 
-      #chdir $_ ;
-      $mdep = max $mdep , & node_proc ( $dep + 1 ) ; # <-- 再帰的な呼び出し
+      $depM = max $depM , & node_proc ( $dep + 1 ) ; # <-- 再帰的な呼び出し
       chdir $dh or die ; # ここで戻れないのは重大
     }
     closedir $dh ;
-    $S [ $dep ] [ $mdep ] ++ ;
+    $S [ $dep ] [ $depM ] ++ ;
     say join "\t" , $o{g} =~ m/d/ ? () : $dep, head_trim getcwd if $g1{$dep}  ; 
-    say join "\t" , $o{g} =~ m/d/ ? () : "$dep-$mdep", head_trim getcwd if  $g2{"$dep-$mdep"} ; 
-        return $mdep ;
+    say join "\t" , $o{g} =~ m/d/ ? () : "$dep-$depM", head_trim getcwd if  $g2{"$dep-$depM"} ; 
+    return $depM ;
   }
-
-}
-END{
-  say STDERR " --  " , REVERSE ITALIC " Process time: " , CLEAR " " , 
-     sprintf( "%.6f", tv_interval $time_start , [ gettimeofday ] ) , " second(s)." ;
 }
 
 sub output ($$) {  # 引数 \@S と \@Sq が引数となる。
   my $asum = 0 ; # ファイル数の合計
   my @out = ( '', 0 .. $#{$_[0]} , '+' , '++' ) ;
-  push @out , MAGENTA "Symbolic_link_dir" if sum0 map { $_ // 0 } @{$_[1]} ; # Sq ;
+  push @out , MAGENTA "Symbolic_link_dir" if sum0 map { $_ // 0 } @{$_[1]} ; # f ;
   say join "\t" , @out ;
   for ( 0 .. $#{$_[0]} ) { 
     $_[0]->[$_][$_] //= 0 ; # unless exists $o{0} && $o{0} eq "." ; # 対角成分に対する処理
