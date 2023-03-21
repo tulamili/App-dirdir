@@ -14,6 +14,7 @@ push @ARGV , $o{x} if defined $o{x} ; # 引数がオプションで  与えら�
 my $start_dir = $ARGV [0] // "." ; # 先頭のディレクトリ 
 my $I = catfile q[] , q[] ;
 my $d0 = ( getcwd ) . $I ;
+$o{g} //= '' ;
 chdir $start_dir or do { say STDERR "Seems no such a directory ``$start_dir''" ; exit -1 }  ;
 $d0 = (getcwd ). $I unless exists $o{g} && $o{g} =~ m/a/ ; 
 $d0 = '' if exists $o{g} && $o{g} =~ m/A/ ;
@@ -27,28 +28,17 @@ sub head_trim ( $ ) {
 & main ; 
 exit 0 ;
 
-END{ print RESET "" } ;
-
 END{
+  print RESET "" ; 
   my $s = tv_interval $time_start , [ gettimeofday ] ; 
   say STDERR BOLD FAINT " --  " , "Process time: " , 
     sprintf( "%.6f", $s ) , " second" . ($s>1 ? 's' : '' ) . ". ($0)"  ; 
 }
 
-
 sub open_dir_error_message ( $ ) { 
   say STDERR FAINT BOLD YELLOW "Cannot open the directory `$_[0]' so skipped." ;
 }
 
-# そのインスタンスの下のディレクトリファイルの一覧を文字列の配列で返す。
-sub get_dirs () { 
-  my @dirs ;
-  #return @dirs = grep { -d $_ } glob '*' ; 
-  opendir my $dh , '.' or do { open_dir_error_message ( abs_path "." ) ; return () } ; 
-  @dirs = grep { ! /\A\.{1,2}\Z/ && -d $_ } readdir $dh ; 
-  @dirs = grep { ! /\A\./ } @dirs if 0 eq ($o{'.'}//'') ; # 隠しファイルに関する処理
-  return @dirs ; 
-}
 
 sub main () {
   # コンマ区切り ハイフン結合ペアの取り出し
@@ -72,7 +62,7 @@ sub main () {
     my @dirs0 = sort grep { ! /\A\.{1,2}\Z/ && -d $_ } readdir $dh ;  # <-- - sort は -g が無いときは不要である
     for ( @dirs0 ) { #reverse 0 .. $#dirs ) {
       do { push @dirs , $_ ; next } if ! -l $_  ;
-      say join "\t" , $o{g} =~ m/d/ ? () : "link", head_trim (getcwd).$I.$_ if ($o{g}//'') =~ m/l/;#exists $o{g} && $o{g} =~ m/l/;
+      say join "\t" , $o{g} =~ m/d/ ? () : "link:", head_trim (getcwd).$I.$_ if $o{g} =~ m/l/;#exists $o{g} && $o{g} =~ m/l/;
       ++ $Sq [ $dep + 1 ] ;         #splice @dirs , $_ , 1 ; 
     }
     @dirs = grep { ! /\A\./ } @dirs if 0 eq ($o{'.'}//'') ; # 隠しファイルに関する処理
@@ -135,7 +125,7 @@ sub HELP_MESSAGE {
     -x dirname : 引数dirnameとして与えるディレクトリ名をオプションとして渡す。
     -. 0 : 隠しファイルを辿らない。
     -g N1-N2 ; iがN1, jがN2に相当するディレクトリ名を出力する。N1-N2の書式は コンマ(,)で連結が可能
-    -g ...[dx] ; xを指定文字列に含むことで表の出力を抑制する。dがある場合は深さ情報は抑制する。
+    -g ...[dx] ; xを指定文字列に含むことで表の出力を抑制する。dがある場合は深さ情報を抑制する。
     -g ...[Aa] : aの有無でディレクトリの表示が変わる。あれば、指定ディレクトリ名から表示する。Aを含めば、絶対パスとなる。
     -g ...l  : シンボリックリンクのディレクトリを出力する。 
 
