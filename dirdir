@@ -94,7 +94,7 @@ sub output ($$) {  # 引数 \@S と \@Sq が引数となる。
     for my $i ( 0 .. $#{$_[0]} - $_) { $_[0]->[$_][$i] //= 0 } ; 
     my @out ;
     push @out , $_ ; # 階層の深さ
-    push @out , my $sumR = sum0 map { $_ || 0 } @{$_[0]->[$_]}   ; 
+    push @out , FAINT my $sumR = sum0 map { $_ || 0 } @{$_[0]->[$_]}   ; 
     push @out , FAINT $sumA += $sumR ;
     my @t = @{$_[0]->[$_]} ; 
     push @out , YELLOW $t[0] ; 
