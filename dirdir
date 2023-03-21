@@ -13,17 +13,14 @@ getopts '.:g:x:0:' , \my%o ;
 push @ARGV , $o{x} if defined $o{x} ; # 引数がオプションで  与えられた場合の処理
 my $start_dir = $ARGV [0] // "." ; # 先頭のディレクトリ 
 my $I = catfile q[] , q[] ;
-my $d0 = ( getcwd ) . $I ;
 $o{g} //= '' ;
 chdir $start_dir or do { say STDERR "Seems no such a directory ``$start_dir''" ; exit -1 }  ;
-$d0 = (getcwd ). $I unless exists $o{g} && $o{g} =~ m/a/ ; 
-$d0 = '' if exists $o{g} && $o{g} =~ m/A/ ;
 
-sub head_trim ( $ ) {
- (my $t = $_[0]) =~ s/^\Q$d0\E// ;
-  $t =~ s/\ /\\ /g ; # <-- 空白文字をエスケープ xargs に渡せるようになる。
- $t ;
-}
+# -- 関数 head_trim の定義 : state でさらに短くなるかも。-- 
+my $d0 = ( getcwd ) . $I ;
+$d0 = (getcwd ). $I unless exists $o{g} && $o{g} =~ m/a/ ; 
+$d0 = '' if $o{g} =~ m/A/ ;
+sub head_trim ( $ ) { return $_[0] =~ s/^\Q$d0\E//r =~ s/\ /\\ /gr }
 
 & main ; 
 exit 0 ;
@@ -42,7 +39,8 @@ sub open_dir_error_message ( $ ) {
 
 sub main () {
   # コンマ区切り ハイフン結合ペアの取り出し
-  my @gg = do { ! exists $o{g} ? () : (my $t = $o{g}) =~ s/[Aadlx]//g ;  map { [ split /-/, $_ ] } split /,/ , $t // '' } ;
+  #my @gg = do { ! exists $o{g} ? () : (my $t = $o{g} =~ s/[Aadlx]//gr ;  map { [ split /-/, $_ ] } split /,/ , $t // '' } ;
+  my @gg = ( map { [ split /-/, $_ ] } split /,/ , $o{g} =~ s/[Aadlx]//gr );
   our %g1 = map { $_ ->[0] , 1 } grep { @ { $_ } == 1 } @gg ; # ペアではないもの
   our %g2 = map { $_->[0] ."-" .$_->[1] , 1 } grep { @ { $_ } == 2 } @gg ; # ペアのもの
 
