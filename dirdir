@@ -94,9 +94,11 @@ sub output ($$) {  # 引数 \@S と \@Sq が引数となる。
     $_[0]->[$_][$_] //= 0 ; # unless exists $o{0} && $o{0} eq "." ; # 対角成分に対する処理
     for my $i ( $_ .. $#{$_[0]} ) { $_[0]->[$_][$i] //= '' } ; 
     #my @out = ( $_ , map { ! defined $_ ? '' : $_ eq '' ? FAINT 0 : $_ } @{$_[0]->[$_]} ) ; 
-    my @out = ( $_ , map { ! defined $_ ? '' : $_ eq '' ? FAINT 0 : $_ } do { my @t = @{$_[0]->[$_]} ; @t[1..@t-1] } ) ; 
+    my @out ;
+    push @out , $_ ;
     push @out , FAINT my $rsum = sum0 map { $_ || 0 } @{$_[0]->[$_]}   ; 
     push @out , $asum += $rsum ;
+    push @out , map { ! defined $_ ? '' : $_ eq '' ? FAINT 0 : $_ } do { my @t = @{$_[0]->[$_]} ; @t[1..@t-1] } ; 
     push @out , MAGENTA "+$_[1]->[$_]" if $_[1]->[$_] ;
     push @out , substr $Ex [$_][$_] // '  ' , 2 ; # 先頭の2文字は 通常 './'' または '  ' になるはずなので、それを除去。
     push @out , substr $Ex2[$_][$_] // '  ' , 2 ; 
