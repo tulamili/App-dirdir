@@ -1,0 +1,11 @@
+
+Revision history for the module "App::dirdir"
+
+2019-05-10 〜 2019-05-13 : 
+  - 最初に depthdepth という名前で作成。
+
+2021-05-26 : 
+  - https://github.com/tulamili/Bin-File-Dir などに収録。
+
+2023-03-21 : 
+  - App::dirdir に dirdir という名前のコマンドとして収録することに。
