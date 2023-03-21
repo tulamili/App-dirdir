@@ -98,8 +98,8 @@ sub output ($$) {  # 引数 \@S と \@Sq が引数となる。
     push @out , FAINT my $rsum = sum0 map { $_ || 0 } @{$_[0]->[$_]}   ; 
     push @out , $asum += $rsum ;
     push @out , MAGENTA "+$_[1]->[$_]" if $_[1]->[$_] ;
-    push @out , substr $Ex [$_][$_] // '  ' ,2 ; 
-    push @out , substr $Ex2[$_][$_] // '  ' ,2 ; 
+    push @out , substr $Ex [$_][$_] // '  ' , 2 ; # 先頭の2文字は 通常 './'' または '  ' になるはずなので、それを除去。
+    push @out , substr $Ex2[$_][$_] // '  ' , 2 ; 
     say join "\t" , @out ; 
   }
 }
