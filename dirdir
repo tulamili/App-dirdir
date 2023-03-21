@@ -37,7 +37,7 @@ exit 0 ;
 END{
   print RESET "" ; 
   my $s = tv_interval $time_start , [ gettimeofday ] ; 
-  say STDERR BOLD FAINT " --  " , "Process time: " , 
+  say STDERR BOLD FAINT ITALIC " --  " , "Process time: " , 
     sprintf( "%.6f", $s ) , " second" . ($s>1 ? 's' : '' ) . ". ($0)"  ; 
 }
 
@@ -58,28 +58,24 @@ sub node_proc ( $ $ )  {  # 第１引数は、元の指定ディレクトリか�
   my $depM = $dep ; # 最大深さの記録用。
   my @dirs ; 
   opendir my $dh , '.' or do { open_dir_error_message ( abs_path "." ) ; return () } ; 
-  my @dirs0 = sort grep { ! /\A\.{1,2}\Z/ && -d $_ } readdir $dh ;  # <-- - sort は -g が無いときは不要である
+  my @dirs0 = sort grep { ! /^\.{1,2}$/o && -d $_ } readdir $dh ;  # <-- - sort は -g が無いときは不要である
   for ( @dirs0 ) { 
     do { push @dirs , $_ ; next } if ! -l $_  ;
     say join "\t" , $o{g} =~ m/d/ ? () : "link:", head_trim (getcwd).$I.$_ if $o{g} =~ m/l/;#exists $o{g} && $o{g} =~ m/l/;
-    ++ $Sq [ $dep + 1 ] ;   
+    ++ $Sq [ $dep + 1 ] ;   # シンボリックリンクファイルについて数える。
   }
-  @dirs = grep { ! m/\A\./ } @dirs if 0 eq $o{'.'} ; # 隠しファイルに関する処理 \A
+  @dirs = grep { ! m/^\./ } @dirs if 0 eq $o{'.'} ; # 隠しファイルに関する処理 
   for ( @dirs ) { 
-    #say "'$o{'.'}'" , $_ unless ! /^\./ ;
     next unless chdir $_ ; 
-    #$depM = max $depM , & node_proc ( $dep + 1 ) ; # <-- 再帰的な呼び出し
-    #$depM = max $depM , & node_proc ( $dep + 1 , "$dn$I$_" ) ; # <-- 再帰的な呼び出し
     my ($depM1,$dnM1) = & node_proc ( $dep + 1 , "$dn$I$_" ) ; # 1はここでは一時的を意味する。
     ( $depM, $dnM ) = ($depM1, $dnM1) if $depM1 > $depM ; 
-    chdir $dh or die ; # ここで戻れないのは重大
+    chdir $dh or die ; # ここで戻れないのは、とてもおかしいはず。
   }
-  #closedir $dh ;
   $S [ $dep ] [ $depM ] ++ ;
   $Ex [ $dep ] [ $depM ] //= $dnM ;
   $Ex2[ $dep ] [ $depM ] = $dnM ;
-  say join "\t" , $o{g} =~ m/d/ ? () : $dep, head_trim getcwd if $g1{$dep}  ; 
-  say join "\t" , $o{g} =~ m/d/ ? () : "$dep-$depM", head_trim getcwd if  $g2{"$dep-$depM"} ; 
+  say join "\t" , $o{g} =~ m/d/ ? () : $dep, head_trim getcwd , 2 if $g1{$dep}  ;  # head_trim getcwd から変更substr $dn
+  say join "\t" , $o{g} =~ m/d/ ? () : "$dep-$depM", head_trim getcwd  if  $g2{"$dep-$depM"} ; 
   return $depM , $dnM  ; # <- - $dn であっているか
 }
 
