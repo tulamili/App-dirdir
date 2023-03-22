@@ -11,6 +11,7 @@ use Cwd qw [ getcwd abs_path ] ;
 
 my $time_start = [ gettimeofday ] ; 
 GetOptions ( 'pattern=s' => \my$ptn ) ; #  ファイル名(末端)でパターンに当てはまる物だけを数える(例には影響しない)。
+GetOptions ( 'nodiff' => \my$nodiff ) ; # ディレクトリ深さの階層の、「差」を取らないようにする。
 GetOptions ( 'noshuffle' => \my$noshuffle ) ; # shuffle を無効化する。
 * shuffle = sub(@){@_} if $noshuffle ;
 getopts '.:fg:s:v:0:' , \my%o ; 
@@ -79,7 +80,7 @@ sub node_proc ( $ $ )  {  # 第１引数は、元の指定ディレクトリか�
   for ( @dirs ) { 
     next unless chdir $_ ; 
     my ($depM1,$dnM1) = & node_proc ( $dep + 1 , "$dn$I$_" ) ; # 1はここでは一時的を意味する。
-    ( $depM, $dnM ) = ($depM1, $dnM1) if $depM1 > $depM ; 
+    ( $depM, $dnM ) = ($depM1, $dnM1) if ($depM1//'-Inf') > $depM ; 
     chdir $dh or die ; # ここで戻れないのは、とてもおかしいはず。
   }
   $ptn = qr/$ptn/ if defined $ptn;
@@ -110,6 +111,7 @@ sub output ($$) {  # 引数 \@S と \@Sq が引数となる。
     push @out , FAINT $sumA += $sumR ;
     push @out , FAINT $sumR ;
     my @t = @{$_[0]->[$_]} ; 
+    push @out , ('') x ( $_ - 1 ) if $nodiff ; 
     push @out , YELLOW $t[0] ; 
     push @out , map { ! defined $_ ? '' : $_ eq 0 ? FAINT 0 : $_ } @t [ 1 .. $#t ] ; # @{$_[0]->[$_]} ; #@t[0..@t] } ; 
     push @out , MAGENTA "+$_[1]->[$_]" if $_[1]->[$_] ;
@@ -176,3 +178,5 @@ sub HELP_MESSAGE {
 
   開発上の注意 : 
     * chdir ".." が意図通りに動作しないことがあったので、opendirを使った動作とした。
+    * examples でパスの表示が長くなるので、うまく省略したい。たとえば、最後から3番目まで-にするか、途中を略称にするかしたい。
+    * パスの途中の空白文字をエスケープするオプションを作りたい。
