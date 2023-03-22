@@ -5,11 +5,14 @@ use Time::HiRes qw[gettimeofday tv_interval] ;
 use Term::ANSIColor qw [ :constants color ] ; $Term::ANSIColor::AUTORESET = 1 ; 
 use File::Spec::Functions qw[ catfile splitdir rel2abs updir ] ; 
 use Getopt::Std ; 
+use Getopt::Long qw [ GetOptions :config bundling no_ignore_case pass_through ] ; # GetOptionsFromArray ] ;
 use List::Util qw [ max min sum sum0 reduce shuffle ] ;
 use Cwd qw [ getcwd abs_path ] ;
 
 my $time_start = [ gettimeofday ] ; 
-getopts '.:g:s:v:0:' , \my%o ; 
+GetOptions ( 'noshuffle' => \my$noshuffle ) ; # -2 0 または -20 が指定されたら、計算秒数などの情報を出力しない。
+* shuffle = sub(@){@_} if $noshuffle ;
+getopts '.:fg:s:v:0:' , \my%o ; 
 $o{s} = exists $o{s} ? srand $o{s} : srand ; 
 $o{g} //= '' ; # どんなデータを出力させるか(get)
 $o{v} //= 2  ; # 具体例を何個表示するか
@@ -62,7 +65,9 @@ sub node_proc ( $ $ )  {  # 第１引数は、元の指定ディレクトリか�
   my @dirs ; 
   opendir my $dh , '.' or do { open_dir_error_message ( abs_path "." ) ; return () } ; 
   #my @dirs0 = sort grep { ! /^\.{1,2}$/o && -d $_ } readdir $dh ;  # <-- - sort は -g が無いときは不要である
-  my @dirs0 = shuffle sort grep { ! /^\.{1,2}$/o && -d $_ } readdir $dh ;  # <-- - sort は -g が無いときは不要である
+  my @allfiles = readdir $dh ; 
+  my @dirs0 = shuffle sort grep { ! /^\.{1,2}$/o && -d $_ } @allfiles  ;  # <-- - sort は -g が無いときは不要である
+  my @plainfiles = grep { -f $_ } @allfiles if $o{f} ;
   for ( @dirs0 ) { 
     do { push @dirs , $_ ; next } if ! -l $_  ;
     say join "\t" , $o{g} =~ m/d/ ? () : "link:", head_trim (getcwd).$I.$_ if $o{g} =~ m/l/;#exists $o{g} && $o{g} =~ m/l/;
@@ -75,7 +80,7 @@ sub node_proc ( $ $ )  {  # 第１引数は、元の指定ディレクトリか�
     ( $depM, $dnM ) = ($depM1, $dnM1) if $depM1 > $depM ; 
     chdir $dh or die ; # ここで戻れないのは、とてもおかしいはず。
   }
-  $S [ $dep ] [ $depM - $dep ] ++ ;
+  $S [ $dep ] [ $depM - $dep ] += $o{f} ? scalar @plainfiles : 1 ;
   $Ex [ $dep ] [ $depM - $dep ] //= $dnM ;
   $Ex2[ $dep ] [ $depM - $dep ] = $dnM ;
   say join "\t" , $o{g} =~ m/d/ ? () : $dep, head_trim getcwd , 2 if $g1{$dep}  ;  # head_trim getcwd から変更substr $dn
@@ -86,16 +91,17 @@ sub node_proc ( $ $ )  {  # 第１引数は、元の指定ディレクトリか�
 
 sub output ($$) {  # 引数 \@S と \@Sq が引数となる。
   my $sumA = 0 ; # ファイル数の合計
-  my @out = ( '', '+', '++', 0 .. $#{$_[0]} - 1 ) ;  # 0を1に。
+  my @out = ( '', '++', '+', 0 .. $#{$_[0]} - 1 ) ;  # 0を1に。
   push @out , MAGENTA "Symbolic_link_dir" if sum0 map { $_ // 0 } @{$_[1]} ; # f ;
-  push @out , UNDERLINE YELLOW "examples" if $o{v} >= 1 ;
+  push @out , UNDERLINE YELLOW "dir examples" if $o{v} >= 1 ;
   say join "\t" , @out ;
-  for ( 1 .. $#{$_[0]} ) {  # 0を1に。
-    for my $i ( 0 .. $#{$_[0]} - $_) { $_[0]->[$_][$i] //= 0 } ; 
+  for ( 1 .. $#{$_[0]}  ) {  # 0を1に。
+    for my $i ( 0 .. $#{$_[0]} - $_ ) { $_[0]->[$_][$i] //= 0 } ; 
     my @out ;
     push @out , $_ ; # 階層の深さ
-    push @out , FAINT my $sumR = sum0 map { $_ || 0 } @{$_[0]->[$_]}   ; 
+    my $sumR = sum0 map { $_ || 0 } @{$_[0]->[$_]}   ; 
     push @out , FAINT $sumA += $sumR ;
+    push @out , FAINT $sumR ;
     my @t = @{$_[0]->[$_]} ; 
     push @out , YELLOW $t[0] ; 
     push @out , map { ! defined $_ ? '' : $_ eq 0 ? FAINT 0 : $_ } @t [ 1 .. $#t ] ; # @{$_[0]->[$_]} ; #@t[0..@t] } ; 
@@ -129,12 +135,27 @@ sub HELP_MESSAGE {
    
    指定されたディレクトリから、i階層下にあるディレクトリで、さらにそこからj階層下まで
   何かディレクトリを持つものが何個あるのかを、行列状に示す。縦方向がiで、横方向がjに対応。
-   出力表において、「+」と表記された列は、i階層の合計値を示す。「++」は累積和。
-  シンボリックリンクのディレクトリは辿らない。存在する場合は、その数を出力する。
+   シンボリックリンクのディレクトリは辿らない。存在する場合は、その数を出力する。
+   dirname が指定されない場合は、現行ディレクトリが指定されたものと見なされる。
 
-  オプション: 
+ 出力表の解説 :
+   1. 出力表において、「+」と表記された列は、i階層の合計値を示す。「++」は累積和。
+   2. 最も左の列は i = 1,2,3.. を示す。最初の列の内、数は j = 0,1,2,..,(i-1)を示す。
+   3. j=0 (対応する各ディレクトリは子ディレクトリを持たない)は黄色で示した。
+      その部分に対応するディレクトリの例が、最も右の列に黄色で示される。
+      (ディレクトリの例は、ランダムに抽出される。再現性の確保のため -s でシードが指定可能。)
+   4. マゼンタ(紫)色で、各i(基点からのディレクトリ深さ)に対応するシンボリックリンファイルの
+      ディレクトリの個数を示す。
+   5. オプションの-fの指定により、plainファイルの個数を数える。
+      出力表の最後の行の2列目が、指定ディレクトリ全体の plainファイルの総数と一致する。
+
+   
+
+
+ オプション: 
 
     -. 0 : 隠しファイルを辿らない。
+    -f   : ディレクトリの個数で無くて、普通の(plainな)ファイルの個数を数える。
     -g N1-N2 ; iがN1, jがN2に相当するディレクトリ名を出力する。N1-N2の書式は コンマ(,)で連結が可能
     -g ...[dx] ; xを指定文字列に含むことで表の出力を抑制する。dがある場合は深さ情報を抑制する。
     -g ...[Aa] : aの有無でディレクトリの表示が変わる。あれば、指定ディレクトリ名から表示する。Aを含めば、絶対パスとなる。
