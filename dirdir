@@ -10,7 +10,8 @@ use List::Util qw [ max min sum sum0 reduce shuffle ] ;
 use Cwd qw [ getcwd abs_path ] ;
 
 my $time_start = [ gettimeofday ] ; 
-GetOptions ( 'noshuffle' => \my$noshuffle ) ; # -2 0 または -20 が指定されたら、計算秒数などの情報を出力しない。
+GetOptions ( 'pattern=s' => \my$ptn ) ; #  ファイル名(末端)でパターンに当てはまる物だけを数える(例には影響しない)。
+GetOptions ( 'noshuffle' => \my$noshuffle ) ; # shuffle を無効化する。
 * shuffle = sub(@){@_} if $noshuffle ;
 getopts '.:fg:s:v:0:' , \my%o ; 
 $o{s} = exists $o{s} ? srand $o{s} : srand ; 
@@ -81,11 +82,16 @@ sub node_proc ( $ $ )  {  # 第１引数は、元の指定ディレクトリか�
     ( $depM, $dnM ) = ($depM1, $dnM1) if $depM1 > $depM ; 
     chdir $dh or die ; # ここで戻れないのは、とてもおかしいはず。
   }
-  $S [ $dep ] [ $depM - $dep ] += $o{f} ? scalar @plainfiles : 1 ;
-  $Ex [ $dep ] [ $depM - $dep ] //= $dnM ;
-  $Ex2[ $dep ] [ $depM - $dep ] = $dnM ;
+  $ptn = qr/$ptn/ if defined $ptn;
+  @plainfiles = grep { $_ =~ m/$ptn/ } @plainfiles if $o{f} && defined $ptn ; 
+  #say RED eval { $ptn } , " " ,$dn if $dn =~ m/$ptn/o ;
+  $S [ $dep ] [ $depM - $dep ] += $o{f} ? @plainfiles : defined $ptn ?  $dn =~ m/$ptn/o ? 1 : 0 : 1 ;
+  $Ex [ $dep ] [ $depM - $dep ] //= $dnM if ! defined $ptn || ! $o{f} && $dn =~ m/$ptn/ ;
+  $Ex2[ $dep ] [ $depM - $dep ] = $dnM if ! defined $ptn || ! $o{f} && $dn =~ m/$ptn/ ;;
   say join "\t" , $o{g} =~ m/d/ ? () : $dep, head_trim getcwd , 2 if $g1{$dep}  ;  # head_trim getcwd から変更substr $dn
-  say join "\t" , $o{g} =~ m/d/ ? () : "$dep-$depM", head_trim getcwd  if  $g2{"$dep-$depM"} ; 
+  my $g2x = "$dep-" . ($depM -$dep) ; 
+  #say join "\t" , $o{g} =~ m/d/ ? () : "$dep-$depM", head_trim getcwd  if  $g2{"$dep-$depM"} ; 
+  say join "\t" , $o{g} =~ m/d/ ? () : $g2x , head_trim getcwd  if  $g2{$g2x} ; 
   return $depM , $dnM  ; # <- - $dn であっているか
 }
 
@@ -108,8 +114,8 @@ sub output ($$) {  # 引数 \@S と \@Sq が引数となる。
     push @out , map { ! defined $_ ? '' : $_ eq 0 ? FAINT 0 : $_ } @t [ 1 .. $#t ] ; # @{$_[0]->[$_]} ; #@t[0..@t] } ; 
     push @out , MAGENTA "+$_[1]->[$_]" if $_[1]->[$_] ;
     # 先頭の2文字は 通常 './'' または '  ' になるはずなので、それを除去。
-    push @out , YELLOW (my $t1 = substr $Ex [$_][0] // '  ' , 2 ) if $o{v} >= 1 ; 
-    push @out , YELLOW do{ my $t2 = substr $Ex2[$_][0] // '  ' , 2 ; $t2 eq $t1 ? () : ($t2) } if $o{v} >= 2 ;
+    push @out , YELLOW (my $t1 = substr $Ex[$_][0]//$Ex[$_][1]//$Ex[$_][2]//'  ' , 2 ) if $o{v} >= 1 ; 
+    push @out , YELLOW do{ my $t2 = substr $Ex2[$_][0]//$Ex2[$_][1]//$Ex2[$_][2]//'  ' , 2 ; $t2 eq $t1 ? () : ($t2) } if $o{v} >= 2 ;
     print join "\t" , @out ; 
     say color('reset') ;
   }
@@ -150,10 +156,7 @@ sub HELP_MESSAGE {
    5. オプションの-fの指定により、plainファイルの個数を数える。
       出力表の最後の行の2列目が、指定ディレクトリ全体の plainファイルの総数と一致する。
 
-   
-
-
- オプション: 
+  オプション: 
 
     -. 0 : 隠しファイルを辿らない。
     -f   : ディレクトリの個数で無くて、普通の(plainな)ファイルの個数を数える。
@@ -163,7 +166,8 @@ sub HELP_MESSAGE {
     -g ...l  : シンボリックリンクのディレクトリを出力する。 
     -l 0 : シンボリックリンファイルは見ない。
     -s N  : シャッフルの時の、ランダムシード。
-    --noshuffle: シャッフルをしない。-v1で辞書順最初、-v2で加えて辞書順最後が出力される。
+    --noshuffle : シャッフルをしない。-v1で辞書順最初、-v2で加えて辞書順最後が出力される。
+    --pattern : (実験的)ディレクトリ名またはファイル名を正規表現で指定する。(末尾は$を指定するが、先頭文字へのマッチングは^ではなくて、/を指定すること。)
 
     -v N : 該当するディレクトリ名を、具体的に何個取り出すか。N=0,1,2が指定できる。
 
