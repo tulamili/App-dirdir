@@ -1,4 +1,4 @@
-package App::dirdir ;  
+package App::dirstrata ;  
 our $VERSION = '0.024' ; 
 our $DATE = '2023-03-241T13:20+09:00' ; 
 
@@ -6,13 +6,13 @@ our $DATE = '2023-03-241T13:20+09:00' ;
 
 =head1 NAME
 
-App::dirdir -- 「何階層潜った所から最大何階層下までディレクトリを持つディレクトリが何個存在するか」を三角行列状に示す。
+App::dirstrata -- 「何階層潜った所から最大何階層下までディレクトリを持つディレクトリが何個存在するか」を三角行列状に示す。
 
- dirdir -- 他に dirdig dirdim dirdist というコマンドも作るので、それに名前を合わせた。2次元行列状の出力なので2回同じ語を繰り返した。
+ dirstrata -- 他に dirdig dirdim dirdist というコマンドも作るので、それに名前を合わせた。2次元行列状の出力なので2回同じ語を繰り返した。
 
 =head1 SYNOPSIS
 
-This module provides a Unix-like command `F<dirdir>'.
+This module provides a Unix-like command `F<dirstrata>'.
 
 =head1 DESCRIPTION
 
