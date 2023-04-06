@@ -120,10 +120,11 @@ sub output ($$) {  # 引数 \@S と \@Sq が引数となる。
     # 先頭の2文字は 通常 './' (".$I") または '  ' になるはずなので、それを除去。
     push @out , YELLOW (my $t1 = substr $Ex[$_][0]//$Ex[$_][1]//$Ex[$_][2]//'  ' , 2 ) if $o{v} >= 1 ; 
     push @out , YELLOW do{ my $t2 = substr $Ex2[$_][0]//$Ex2[$_][1]//$Ex2[$_][2]//'  ' , 2 ; $t2 eq $t1 ? () : ($t2) } if $o{v} >= 2 ;
-    print join "\t" , @out ; 
-    say color('reset') ;
+    say join "\t" , @out ; 
+    print color('reset') ;
   }
-  for ( @dnLong) { say $_ } ;
+  #for ( @dnLong ) { say $_ } ; # 最も文字数の多いディレクトリ名の表示
+  say "The longest direcotry name(s) : @dnLong" if 0 < ($o{L} // 0 ) ; 
 }
 
 ## ヘルプの扱い
@@ -176,7 +177,7 @@ sub HELP_MESSAGE {
     --pattern : (実験的)ディレクトリ名またはファイル名を正規表現で指定する。(末尾は$を指定するが、先頭文字へのマッチングは^ではなくて、/を指定すること。)
 
     -v N : 該当するディレクトリ名を、具体的に何個取り出すか。N=0,1,2が指定できる。
-    -L N : 最も長い異なるディレクトリ名(のbasename)も N 個出力する。
+    -L N : 最も長い異なるディレクトリ名(のbasename)も N 個出力する。未指定ならN=1。出力しない場合は 0 を指定すること。
 
   その他の注意: 
     - Ctrl+C では途中結果を出すのみで，停止しない。Ctrl+\で停止する。
